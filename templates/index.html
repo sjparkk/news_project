@@ -1,0 +1,284 @@
+<!Doctype html>
+<html lang="ko">
+
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+              integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+              crossorigin="anonymous">
+
+        <!-- JS -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+                integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+                crossorigin="anonymous"></script>
+
+        <!-- 구글폰트 -->
+        <link href="https://fonts.googleapis.com/css?family=Stylish&display=swap" rel="stylesheet">
+
+        <!-- 스윗알럿 -->
+        <script src="https:///unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+        <!-- 디스커스 -->
+        <script id="dsq-count-scr" src="//sjpark.disqus.com/count.js" async></script>
+
+        <title>오늘은 무슨 일이 있었을까?</title>
+
+        <!-- style -->
+        <style type="text/css">
+
+            * {
+                font-family: "Stylish", sans-serif;
+            }
+
+            .wrap {
+                width: 1000px;
+                margin: auto;
+            }
+
+            .comment {
+                color: blue;
+                font-weight: bold;
+            }
+
+            .card-img-top {
+                width: 300px;
+                padding-bottom: 10px;
+            }
+
+            #card card-image {
+                background-size: cover;
+            }
+
+            #search-box {
+                width: 1000px;
+                margin: 10px auto;
+                padding: 10px;
+                border: black solid;
+                border-radius: 5px;
+            }
+
+        </style>
+
+        <script>
+
+            $(document).ready(function () {
+                $("#cards-box").html(""); <!-- 기존 카드 박스 아무것도 안나오게함 -->
+                showArticles();
+
+            });
+
+            <!-- search-box 보여줌 -->
+            function openClose() {
+                // id 값 search-box의 display 값이 block 이면(= 눈에 보이면)
+                if ($("#search-box").css("display") == "block") {
+                    // search-box를 가리고
+                    $("#search-box").hide();
+                    // 다시 버튼을 클릭하면, 박스 열기를 할 수 있게 텍스트 바꿔두기
+                    $("#btn-search-box").text("뉴스 검색 시작하기");
+                } else {
+                    // 아니면(눈에 보이지 않으면) search-box를 펴라
+                    $("#search-box").show();
+                    // 다시 버튼을 클릭하면, 박스 닫기를 할 수 있게 텍스트 바꿔두기
+                    $("#btn-search-box").text("뉴스 검색 종료하기");
+                }
+            }
+
+            <!-- 처음 검색한 기사 보여주기 -->
+            function postArticle() {
+                let keyword_receive = $("#post-comment").val();
+                let max_display = $("#post-display").val();
+
+                $.ajax({
+                    type: "POST",
+                    url: "/memo",
+                    data: {keyword_give: keyword_receive, max_display_give: max_display},
+                    success: function (response) { // 성공하면
+                        if (response["result"] == "success") {
+                            $("#cards-box").empty();
+
+                            let articles = response['articles']
+                            for (let i = 0; i < articles.length; i++) {
+                                makeCard(articles[i]['image'], articles[i]['originallink'], articles[i]['title'], articles[i]['description'], articles[i]['isScraped'])
+                            }
+                            swal("검색 완료", "", "success");
+                        }
+                    }
+                })
+            }
+
+            <!-- 카드생성 -->
+            function makeCard(image, originallink, title, description, isScraped) {
+                if(!image){
+                    image = '/images'
+                }
+                let tempHtml;
+                if(isScraped === true ) {
+                    tempHtml = `<div class="card">
+                        <img class="card-img-top" src="${image}" width="300px" height="300px" alt="Card image cap">
+                        <div class="card-body">
+                        <a href=${originallink} target="_blank" class="card-title">${title}</a>
+                        <p class="card-text" height="200px">${description}</p>
+                        <p class="card-text comment"></p>
+                        <button onclick='scrapedArticles("${originallink}")' id="btn-scraped-box" type="button" class="btn btn-primary">스크랩되었습니다.
+                    </button>
+                    </div>`;
+                } else {
+                       tempHtml = `<div class="card">
+                        <img class="card-img-top" src="${image}" width="300px" height="300px" alt="Card image cap">
+                        <div class="card-body">
+                        <a href=${originallink} target="_blank" class="card-title">${title}</a>
+                        <p class="card-text" height="200px">${description}</p>
+                        <p class="card-text comment"></p>
+                        <button onclick='scrapedArticles("${originallink}")' id="btn-scraped-box" type="button" class="btn btn-primary">스크랩하기
+                    </button>
+                    </div>`;
+                }
+                $("#cards-box").append(tempHtml);
+            }
+
+            <!-- 스크랩 기사 -->
+            function scrapedArticles(originallink) {
+                $.ajax({
+                    type: "POST",
+                    url: "/scraped",
+                    data: {
+                        'scraped_originallink': originallink
+                    },
+                    success: function (response) {
+                        if (response["result"] == "success") {
+                            swal("저장 완료", "", "success");
+                        }
+                    }
+                })
+            }
+
+            <!-- 새로고침 시에 스크랩된(서버에 저장된 기사들) 기사만 보여줌 -->
+            function showArticles() {
+                $("#cards-box").empty();
+                $.ajax({
+                    type: "GET",
+                    url: "/memo",
+                    data: {},
+                    success: function (response) {
+                        let articles = response['articles']
+                        for (let i = 0; i < articles.length; i++) {
+                                makeCard(articles[i]['image'], articles[i]['originallink'], articles[i]['title'], articles[i]['description'], true)
+                        }
+                    }
+                })
+            }
+
+            <!-- 기사 전체 삭제 -->
+            function deleteArticles() {
+                $.ajax({
+                    type: "POST",
+                    url: "/delete",
+                    data: {},
+                    success: function (response) {
+                        if (response["result"] == "success") {
+                            swal("삭제 완료", "", "success");
+                            setTimeout(function () {
+                                window.location.reload(1);
+                            }, 2000);
+                        }
+                    }
+                })
+            }
+
+            <!-- 기사 전체 삭제 최종 확인 -->
+            function next() {
+                if (confirm("정말 삭제하시겠습니까?")) {
+                    deleteArticles()
+                } else {
+                    swal("삭제 취소 완료", "", "success");
+                    history.go(-1);
+                    setTimeout(function () {
+                        window.location.reload(1);
+                    }, 2000);
+                }
+            }
+
+        </script>
+
+    </head>
+
+    <body>
+        <div class="wrap">
+            <div class="jumbotron">
+                <img src="http://www.econovill.com/news/photo/202005/397795_323227_1954.jpg" class="img-fluid"
+                     width="100%">
+                <h1 class="display-4" id="title">오늘은 무슨 일이 있었을까?</h1>
+                <p class="lead">뉴스 검색 시작하기를 눌러 궁금한 기사 내용과 보고 싶은 기사 개수를 정해 검색을 해주세요.</p>
+                <hr class="my-4">
+                <p class="lead">
+                    <button onclick="openClose()" id="btn-search-box" type="button" class="btn btn-primary">뉴스 검색 시작하기
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="next()">기사 전체 삭제</button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.reload()">스크랩 기사만 남기고 삭제
+                    </button>
+                </p>
+            </div>
+
+            <!--검색창-->
+            <div id="search-box" class="form-post" style="display:none">
+                <!-- Section: form dark -->
+                <section class="form-dark mb-5">
+
+                    <!--Form without header-->
+                    <div class="card card-image"
+                         style="background-image: url('http://www.econovill.com/news/photo/202005/397795_323227_1954.jpg'); background-repeat: no-repeat;
+                         background-size: cover;">
+                        <div class="text-white rgba-stylish-strong py-5 px-5 z-depth-4">
+
+                            <!--Header-->
+                            <div class="text-center">
+                                <h3 class="white-text mb-5 mt-4 font-weight-bold text-uppercase" width = "300px">검색창 <a
+                                        class="green-text font-weight-bold"></a></h3>
+                            </div>
+
+                            <div class="md-form">
+                                <input type="text" id="post-comment" class="form-control" width = "300px">
+                                <label for="post-comment">키워드</label>
+                            </div>
+
+                            <div class="md-form">
+                                <input type="text" id="post-display" class="form-control" width = "300px">
+                                <label for="post-display">기사 검색 개수</label>
+                            </div>
+
+                            <!--Grid row-->
+                            <div class="row d-flex align-items-center">
+
+                                <!--Grid column-->
+                                <div class="text-center col-md-12 mt-3 mb-2">
+                                    <button type="button" class="btn btn-success btn-block btn-rounded z-depth-1"
+                                            onclick="postArticle()">검색하기
+                                    </button>
+                                </div>
+                                <!--Grid column-->
+                            </div>
+                            <!--Grid row-->
+
+                        </div>
+                    </div>
+                    <!--/Form without header-->
+
+                </section>
+                <!-- Section: form dark -->
+            </div>
+
+            <div id="cards-box" class="card-columns">
+                <div class="card">
+                </div>
+            </div>
+
+
+        </div>
+        <div id="disqus_thread"></div>
+    </body>
+</html>
